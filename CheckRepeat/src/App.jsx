@@ -1,30 +1,22 @@
 import React, { useState, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import './App.css';
+import { formatAmount } from './utils/formatAmount';
+import { renderRow } from './utils/renderRow';
 
 const App = () => {
   const [data, setData] = useState([]);
   const [duplicatesSumNumber, setDuplicatesSumNumber] = useState([]);
+  const [duplicatesSumCounterparty, setDuplicatesSumCounter] = useState([]);
   const [duplicatesSum, setDuplicatesSum] = useState([]);
-  const [selectedCounterparty, setSelectedCounterparty] = useState(''); // '' = все
+
+  // Фильтры
+  const [selectedCounterpartySumCp, setSelectedCounterSumCp] = useState(''); // ←  + Контрагент"
+  const [selectedCounterpartySumOnly, setSelectedCounterSumOnly] = useState(''); // ← переименовано для ясности
+
   const fileInputRef = useRef(null);
 
-  // === Копирование текста из ячейки ===
-  const copyCellText = (e) => {
-    e.stopPropagation();
-    const text = e.target.textContent || '';
-    navigator.clipboard.writeText(text).catch((err) => {
-      console.error('Ошибка копирования:', err);
-    });
-
-    const originalBg = e.target.style.backgroundColor;
-    e.target.style.backgroundColor = '#d1ecf1';
-    setTimeout(() => {
-      e.target.style.backgroundColor = originalBg;
-    }, 200);
-  };
-
-  // === Загрузка и парсинг Excel ===
+  // === Загрузка Excel ===
   const handleExcelFile = (file) => {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -36,8 +28,10 @@ const App = () => {
 
       setData(jsonData);
       setDuplicatesSumNumber([]);
+      setDuplicatesSumCounter([]);
       setDuplicatesSum([]);
-      setSelectedCounterparty(''); // сброс фильтра при новой загрузке
+      setSelectedCounterSumCp('');
+      setSelectedCounterSumOnly('');
     };
     reader.readAsArrayBuffer(file);
   };
@@ -50,15 +44,10 @@ const App = () => {
   };
 
   // === Поиск дубликатов ===
-  const formatAmount = (amount) => {
-    if (typeof amount !== 'number') return String(amount);
-    return Math.round(amount * 100) / 100;
-  };
-
   const handleCheck = () => {
     if (data.length === 0) return;
 
-    // Дубли по Сумма + Номер
+    // 1. Сумма + Номер
     const sumNumberMap = new Map();
     for (const item of data) {
       const key = `${formatAmount(item['Сумма'])}-${item['Номер']}`;
@@ -69,7 +58,20 @@ const App = () => {
       .filter((group) => group.length > 1)
       .flat();
 
-    // Дубли только по Сумма
+    // 2. Сумма + Контрагент
+    const sumCounterMap = new Map();
+    for (const item of data) {
+      // Нормализуем дату: убираем время, если есть (например, "01.07.2025 7:00:00" → "01.07.2025")
+      const datePart = String(item['Дата']).split(' ')[0]; // берём только первую часть до пробела
+      const key = `${formatAmount(item['Сумма'])}-${item['Контрагент']}-${datePart}`;
+      if (!sumCounterMap.has(key)) sumCounterMap.set(key, []);
+      sumCounterMap.get(key).push(item);
+    }
+    const duplicatesBySumCounterpartyDate = Array.from(sumCounterMap.values())
+      .filter((group) => group.length > 1)
+      .flat();
+
+    // 3. Только Сумма
     const sumMap = new Map();
     for (const item of data) {
       const key = formatAmount(item['Сумма']);
@@ -81,37 +83,53 @@ const App = () => {
       .flat();
 
     setDuplicatesSumNumber(duplicatesBySumAndNumber);
+    setDuplicatesSumCounter(duplicatesBySumCounterpartyDate);
     setDuplicatesSum(duplicatesBySum);
-    setSelectedCounterparty(''); // сброс фильтра при новом поиске
+    setSelectedCounterSumCp('');
+    setSelectedCounterSumOnly('');
   };
 
   // === Очистка ===
   const handleClear = () => {
     setData([]);
     setDuplicatesSumNumber([]);
+    setDuplicatesSumCounter([]);
     setDuplicatesSum([]);
-    setSelectedCounterparty('');
+    setSelectedCounterSumCp('');
+    setSelectedCounterSumOnly('');
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
 
-  // === Уникальные контрагенты из дублей по сумме ===
-  const uniqueCounterparties = [
+  // === Уникальные контрагенты для фильтров ===
+  const uniqueCounterpartiesSumCp = [
+    ...new Set(
+      duplicatesSumCounterparty.map((item) => item['Контрагент']).filter(Boolean)
+    ),
+  ].sort();
+
+  const uniqueCounterpartiesSumOnly = [
     ...new Set(duplicatesSum.map((item) => item['Контрагент']).filter(Boolean)),
   ].sort();
 
-  // === Фильтрация данных для отображения ===
-  const filteredDuplicatesSum = selectedCounterparty
-    ? duplicatesSum.filter((item) => item['Контрагент'] === selectedCounterparty)
+  // === Фильтрация данных ===
+  const filteredSumCounterparty = selectedCounterpartySumCp
+    ? duplicatesSumCounterparty.filter(
+        (item) => item['Контрагент'] === selectedCounterpartySumCp
+      )
+    : duplicatesSumCounterparty;
+
+  const filteredSumOnly = selectedCounterpartySumOnly
+    ? duplicatesSum.filter((item) => item['Контрагент'] === selectedCounterpartySumOnly)
     : duplicatesSum;
 
   return (
     <div style={{ padding: '20px', fontFamily: 'sans-serif' }}>
-      <h2>Проверка дубликатов</h2>
+      <h2>Анализ дубликатов в Excel</h2>
 
       <div style={{ marginBottom: '15px' }}>
-        <div style={{ marginBottom: '15px' }}>
+        <div style={{ marginBottom: '30px' }}>
           <input
             ref={fileInputRef}
             type="file"
@@ -151,17 +169,59 @@ const App = () => {
                 <th>Контрагент</th>
               </tr>
             </thead>
-            <tbody>
-              {duplicatesSumNumber.map((item, index) => (
-                <tr key={`${item['Номер']}-${item['Сумма']}-${index}`}>
-                  <td onClick={copyCellText}>{item['Дата']}</td>
-                  <td onClick={copyCellText}>{item['Сумма']}</td>
-                  <td onClick={copyCellText}>{item['Номер']}</td>
-                  <td onClick={copyCellText}>{item['Контрагент']}</td>
-                </tr>
-              ))}
-            </tbody>
+            <tbody>{duplicatesSumNumber.map(renderRow)}</tbody>
           </table>
+        </div>
+      )}
+
+      {/* Дубли по Сумма + Контрагент — с фильтром */}
+      {duplicatesSumCounterparty.length > 0 && (
+        <div style={{ marginTop: '30px' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              marginBottom: '10px',
+            }}
+          >
+            <h3 style={{ margin: 0 }}>
+              Дубликаты по «Дата + Сумма + Контрагент» ({duplicatesSumCounterparty.length}
+              )
+            </h3>
+            <select
+              value={selectedCounterpartySumCp}
+              onChange={(e) => setSelectedCounterSumCp(e.target.value)}
+              style={{ padding: '4px 8px', fontSize: '14px' }}
+            >
+              <option value="">— Все контрагенты —</option>
+              {uniqueCounterpartiesSumCp.map((counterparty) => (
+                <option key={counterparty} value={counterparty}>
+                  {counterparty}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {filteredSumCounterparty.length > 0 ? (
+            <table
+              border="1"
+              cellPadding="6"
+              style={{ width: '100%', borderCollapse: 'collapse' }}
+            >
+              <thead>
+                <tr>
+                  <th>Дата</th>
+                  <th>Сумма</th>
+                  <th>Номер</th>
+                  <th>Контрагент</th>
+                </tr>
+              </thead>
+              <tbody>{filteredSumCounterparty.map(renderRow)}</tbody>
+            </table>
+          ) : (
+            <p>Нет записей для выбранного контрагента.</p>
+          )}
         </div>
       )}
 
@@ -180,12 +240,12 @@ const App = () => {
               Дубликаты только по «Сумма» ({duplicatesSum.length})
             </h3>
             <select
-              value={selectedCounterparty}
-              onChange={(e) => setSelectedCounterparty(e.target.value)}
+              value={selectedCounterpartySumOnly}
+              onChange={(e) => setSelectedCounterSumOnly(e.target.value)}
               style={{ padding: '4px 8px', fontSize: '14px' }}
             >
               <option value="">— Все контрагенты —</option>
-              {uniqueCounterparties.map((counterparty) => (
+              {uniqueCounterpartiesSumOnly.map((counterparty) => (
                 <option key={counterparty} value={counterparty}>
                   {counterparty}
                 </option>
@@ -193,7 +253,7 @@ const App = () => {
             </select>
           </div>
 
-          {filteredDuplicatesSum.length > 0 ? (
+          {filteredSumOnly.length > 0 ? (
             <table
               border="1"
               cellPadding="6"
@@ -207,16 +267,7 @@ const App = () => {
                   <th>Контрагент</th>
                 </tr>
               </thead>
-              <tbody>
-                {filteredDuplicatesSum.map((item, index) => (
-                  <tr key={`${item['Номер']}-${item['Сумма']}-${index}`}>
-                    <td onClick={copyCellText}>{item['Дата']}</td>
-                    <td onClick={copyCellText}>{item['Сумма']}</td>
-                    <td onClick={copyCellText}>{item['Номер']}</td>
-                    <td onClick={copyCellText}>{item['Контрагент']}</td>
-                  </tr>
-                ))}
-              </tbody>
+              <tbody>{filteredSumOnly.map(renderRow)}</tbody>
             </table>
           ) : (
             <p>Нет записей для выбранного контрагента.</p>
