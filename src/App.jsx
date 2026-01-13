@@ -12,6 +12,7 @@ const App = () => {
     []
   );
   const [duplicatesBySumOnly, setDuplicatesBySumOnly] = useState([]);
+  const [showCopiedPopup, setShowCopiedPopup] = useState(false);
 
   // Фильтры
   const [
@@ -55,6 +56,23 @@ const App = () => {
     if (upPageRef.current) {
       upPageRef.current.scrollIntoView({ behavior: 'smooth' });
     }
+  };
+
+  const handleCellClick = (e) => {
+    e.stopPropagation();
+    const text = e.target.textContent || '';
+    navigator.clipboard.writeText(text).catch((err) => {
+      console.error('Ошибка копирования:', err);
+    });
+
+    const originalBg = e.target.style.backgroundColor;
+    e.target.style.backgroundColor = '#d1ecf1';
+    setTimeout(() => {
+      e.target.style.backgroundColor = originalBg;
+    }, 200);
+
+    setShowCopiedPopup(true);
+    setTimeout(() => setShowCopiedPopup(false), 2000);
   };
 
   // === Поиск дубликатов ===
@@ -141,69 +159,68 @@ const App = () => {
     : duplicatesBySumOnly;
 
   return (
-    <div style={{ padding: '20px', fontFamily: 'sans-serif' }} ref={upPageRef}>
-      <h2>Анализ дубликатов в Excel</h2>
+    <div className="app-container" ref={upPageRef}>
+      <h2 className="main-title">Анализ дубликатов счетов-фактур</h2>
 
       {data.length <= 0 && <Instruction />}
 
-      <div style={{ marginBottom: '15px' }}>
-        <div style={{ marginBottom: '30px' }}>
+      <div className="form-section">
+        <div className="file-input-container">
+          <label htmlFor="file-upload" className="file-upload-label">
+            Выбрать файл Excel
+          </label>
           <input
+            id="file-upload"
             ref={fileInputRef}
             type="file"
             accept=".xlsx,.xls"
             onChange={handleFileChange}
+            className="file-input-hidden"
           />
         </div>
-        <button
-          onClick={handleCheck}
-          disabled={data.length <= 0}
-          style={{ marginLeft: '10px', marginRight: '10px' }}
-        >
-          Найти дубликаты
-        </button>
-        <button
-          onClick={handleClear}
-          style={{ backgroundColor: '#f44336', color: 'white' }}
-        >
-          Очистить
-        </button>
+        <div className="button-group">
+          <button
+            onClick={handleCheck}
+            disabled={data.length <= 0}
+            className="btn-primary"
+          >
+            Найти дубликаты
+          </button>
+          <button onClick={handleClear} className="btn-danger">
+            Очистить
+          </button>
+        </div>
       </div>
 
       {/* Дубли по Сумма + Номер */}
       {duplicatesBySumAndNumber.length > 0 && (
-        <div style={{ marginTop: '30px' }}>
-          <h3>Дубликаты по «Сумма + Номер» ({duplicatesBySumAndNumber.length})</h3>
-          <table
-            border="1"
-            cellPadding="6"
-            style={{ width: '100%', borderCollapse: 'collapse' }}
-          >
+        <div className="duplicates-section">
+          <h3 className="section-header">
+            Дубликаты по «Сумма + Номер» ({duplicatesBySumAndNumber.length})
+          </h3>
+          <table className="modern-table">
             <thead>
               <tr>
                 <th>Дата</th>
-                <th>Сумма</th>
                 <th>Номер</th>
+                <th>Сумма</th>
                 <th>Контрагент</th>
               </tr>
             </thead>
-            <tbody>{duplicatesBySumAndNumber.map(renderRow)}</tbody>
+            <tbody>
+              {duplicatesBySumAndNumber.map((item, index) =>
+                renderRow(item, index, handleCellClick)
+              )}
+            </tbody>
           </table>
         </div>
       )}
 
       {/* Дубли по Сумма + Контрагент — с фильтром */}
       {duplicatesBySumCounterpartyDate.length > 0 && (
-        <div style={{ marginTop: '30px' }}>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-              marginBottom: '10px',
-            }}
-          >
-            <h3 style={{ margin: 0 }}>
+        <div className="duplicates-section">
+          <div className="filter-container">
+            <h3 className="section-title">
               Дубликаты по «Дата + Сумма + Контрагент» (
               {duplicatesBySumCounterpartyDate.length})
             </h3>
@@ -212,7 +229,7 @@ const App = () => {
               onChange={(e) =>
                 setSelectedCounterpartyForSumCounterpartyDate(e.target.value)
               }
-              style={{ padding: '4px 8px', fontSize: '14px' }}
+              className="filter-select"
             >
               <option value="">— Все контрагенты —</option>
               {uniqueCounterpartiesSumCp.map((counterparty) => (
@@ -224,45 +241,38 @@ const App = () => {
           </div>
 
           {filteredSumCounterparty.length > 0 ? (
-            <table
-              border="1"
-              cellPadding="6"
-              style={{ width: '100%', borderCollapse: 'collapse' }}
-            >
+            <table className="modern-table">
               <thead>
                 <tr>
                   <th>Дата</th>
-                  <th>Сумма</th>
                   <th>Номер</th>
+                  <th>Сумма</th>
                   <th>Контрагент</th>
                 </tr>
               </thead>
-              <tbody>{filteredSumCounterparty.map(renderRow)}</tbody>
+              <tbody>
+                {filteredSumCounterparty.map((item, index) =>
+                  renderRow(item, index, handleCellClick)
+                )}
+              </tbody>
             </table>
           ) : (
-            <p>Нет записей для выбранного контрагента.</p>
+            <p className="no-data-message">Нет записей для выбранного контрагента.</p>
           )}
         </div>
       )}
 
       {/* Дубли только по Сумма — с фильтром */}
       {duplicatesBySumOnly.length > 0 && (
-        <div style={{ marginTop: '30px' }}>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-              marginBottom: '10px',
-            }}
-          >
-            <h3 style={{ margin: 0 }}>
+        <div className="duplicates-section">
+          <div className="filter-container">
+            <h3 className="section-title">
               Дубликаты только по «Сумма» ({duplicatesBySumOnly.length})
             </h3>
             <select
               value={selectedCounterpartyForSumOnly}
               onChange={(e) => setSelectedCounterpartyForSumOnly(e.target.value)}
-              style={{ padding: '4px 8px', fontSize: '14px' }}
+              className="filter-select"
             >
               <option value="">— Все контрагенты —</option>
               {uniqueCounterpartiesSumOnly.map((counterparty) => (
@@ -274,32 +284,31 @@ const App = () => {
           </div>
 
           {filteredSumOnly.length > 0 ? (
-            <table
-              border="1"
-              cellPadding="6"
-              style={{ width: '100%', borderCollapse: 'collapse' }}
-            >
+            <table className="modern-table">
               <thead>
                 <tr>
                   <th>Дата</th>
-                  <th>Сумма</th>
                   <th>Номер</th>
+                  <th>Сумма</th>
                   <th>Контрагент</th>
                 </tr>
               </thead>
-              <tbody>{filteredSumOnly.map(renderRow)}</tbody>
+              <tbody>
+                {filteredSumOnly.map((item, index) =>
+                  renderRow(item, index, handleCellClick)
+                )}
+              </tbody>
             </table>
           ) : (
-            <p>Нет записей для выбранного контрагента.</p>
+            <p className="no-data-message">Нет записей для выбранного контрагента.</p>
           )}
-          <button
-            onClick={scrollToTop}
-            style={{ position: 'fixed', bottom: '20px', right: '20px' }}
-          >
+          <button onClick={scrollToTop} className="btn-sticky">
             Наверх
           </button>
         </div>
       )}
+
+      {showCopiedPopup && <div className="copied-popup">Скопировано</div>}
     </div>
   );
 };
