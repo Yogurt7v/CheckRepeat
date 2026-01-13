@@ -3,6 +3,7 @@ import * as XLSX from 'xlsx';
 import './App.css';
 import { formatAmount } from './utils/formatAmount';
 import { renderRow } from './utils/renderRow';
+import Instruction from './Instruction';
 
 const App = () => {
   const [data, setData] = useState([]);
@@ -21,6 +22,7 @@ const App = () => {
     useState('');
 
   const fileInputRef = useRef(null);
+  const upPageRef = useRef(null);
 
   // === Загрузка Excel ===
   const handleExcelFile = (file) => {
@@ -46,6 +48,12 @@ const App = () => {
     const file = event.target.files?.[0];
     if (file) {
       handleExcelFile(file);
+    }
+  };
+
+  const scrollToTop = () => {
+    if (upPageRef.current) {
+      upPageRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   };
 
@@ -133,8 +141,10 @@ const App = () => {
     : duplicatesBySumOnly;
 
   return (
-    <div style={{ padding: '20px', fontFamily: 'sans-serif' }}>
+    <div style={{ padding: '20px', fontFamily: 'sans-serif' }} ref={upPageRef}>
       <h2>Анализ дубликатов в Excel</h2>
+
+      {data.length <= 0 && <Instruction />}
 
       <div style={{ marginBottom: '15px' }}>
         <div style={{ marginBottom: '30px' }}>
@@ -147,7 +157,7 @@ const App = () => {
         </div>
         <button
           onClick={handleCheck}
-          disabled={data.length === 0}
+          disabled={data.length <= 0}
           style={{ marginLeft: '10px', marginRight: '10px' }}
         >
           Найти дубликаты
@@ -282,6 +292,9 @@ const App = () => {
           ) : (
             <p>Нет записей для выбранного контрагента.</p>
           )}
+          <button onClick={scrollToTop} style={{ margin: '20px 0' }}>
+            Наверх
+          </button>
         </div>
       )}
     </div>
