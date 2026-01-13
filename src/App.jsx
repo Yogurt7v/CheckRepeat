@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import * as XLSX from 'xlsx';
+import { read, utils } from 'xlsx';
 import './App.css';
 import { formatAmount } from './utils/formatAmount';
 import { renderRow } from './utils/renderRow';
@@ -29,10 +29,10 @@ const App = () => {
     const reader = new FileReader();
     reader.onload = (e) => {
       const data = new Uint8Array(e.target.result);
-      const workbook = XLSX.read(data, { type: 'array' });
+      const workbook = read(data, { type: 'array' });
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet);
+      const jsonData = utils.sheet_to_json(worksheet);
 
       setData(jsonData);
       setDuplicatesBySumAndNumber([]);
@@ -292,7 +292,10 @@ const App = () => {
           ) : (
             <p>Нет записей для выбранного контрагента.</p>
           )}
-          <button onClick={scrollToTop} style={{ margin: '20px 0' }}>
+          <button
+            onClick={scrollToTop}
+            style={{ position: 'fixed', bottom: '20px', right: '20px' }}
+          >
             Наверх
           </button>
         </div>
