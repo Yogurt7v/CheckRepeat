@@ -167,7 +167,7 @@ const App = () => {
       <div className="form-section">
         <div className="file-input-container">
           <label htmlFor="file-upload" className="file-upload-label">
-            Выбрать файл Excel
+            Выбрать Excel файл
           </label>
           <input
             id="file-upload"
