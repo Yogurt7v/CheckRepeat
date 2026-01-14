@@ -141,9 +141,25 @@ const App = () => {
     ),
   ].sort();
 
-  const uniqueCounterpartiesSumOnly = [
-    ...new Set(duplicatesBySumOnly.map((item) => item['Контрагент']).filter(Boolean)),
-  ].sort();
+  const uniqueCounterpartiesSumOnly = (() => {
+    const counterpartyMap = new Map();
+    for (const item of duplicatesBySumOnly) {
+      const counterparty = item['Контрагент'];
+      if (!counterparty) continue;
+      const sum = formatAmount(item['Сумма']);
+      if (!counterpartyMap.has(counterparty))
+        counterpartyMap.set(counterparty, new Map());
+      const sumMap = counterpartyMap.get(counterparty);
+      if (!sumMap.has(sum)) sumMap.set(sum, []);
+      sumMap.get(sum).push(item);
+    }
+    const validCounterparties = [];
+    for (const [counterparty, sumMap] of counterpartyMap) {
+      const hasValidSum = Array.from(sumMap.values()).some((group) => group.length > 2);
+      if (hasValidSum) validCounterparties.push(counterparty);
+    }
+    return validCounterparties.sort();
+  })();
 
   // === Фильтрация данных ===
   const filteredSumCounterparty = selectedCounterpartyForSumCounterpartyDate
@@ -152,11 +168,25 @@ const App = () => {
       )
     : duplicatesBySumCounterpartyDate;
 
-  const filteredSumOnly = selectedCounterpartyForSumOnly
-    ? duplicatesBySumOnly.filter(
-        (item) => item['Контрагент'] === selectedCounterpartyForSumOnly
-      )
-    : duplicatesBySumOnly;
+  const filteredSumOnly = (() => {
+    if (!selectedCounterpartyForSumOnly) return duplicatesBySumOnly;
+
+    // Фильтруем по контрагенту
+    const filteredByCounterparty = duplicatesBySumOnly.filter(
+      (item) => item['Контрагент'] === selectedCounterpartyForSumOnly
+    );
+
+    // Группируем по сумме и фильтруем группы с минимум 3 повторениями
+    const sumMap = new Map();
+    for (const item of filteredByCounterparty) {
+      const key = formatAmount(item['Сумма']);
+      if (!sumMap.has(key)) sumMap.set(key, []);
+      sumMap.get(key).push(item);
+    }
+    return Array.from(sumMap.values())
+      .filter((group) => group.length > 1)
+      .flat();
+  })();
 
   return (
     <div className="app-container" ref={upPageRef}>
