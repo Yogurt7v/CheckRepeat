@@ -1,10 +1,36 @@
 import React, { useState, useRef } from 'react';
 import { read, utils } from 'xlsx';
-import './App.css';
 import { formatAmount } from './utils/formatAmount';
-import { renderRow } from './utils/renderRow';
 import Instruction from './Instruction';
-import NoDuplicatesFound from './NoDuplicatesFound';
+import {
+  AppBar,
+  Toolbar,
+  Typography,
+  Container,
+  Paper,
+  Button,
+  Box,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Alert,
+  Snackbar,
+  Fab,
+} from '@mui/material';
+import {
+  UploadFile as UploadFileIcon,
+  Search as SearchIcon,
+  Clear as ClearIcon,
+  KeyboardArrowUp as KeyboardArrowUpIcon,
+  FileCopy as FileCopyIcon,
+} from '@mui/icons-material';
 
 const App = () => {
   const [data, setData] = useState([]);
@@ -212,159 +238,276 @@ const App = () => {
   })();
 
   return (
-    <div className="app-container" ref={upPageRef}>
-      <h2 className="main-title">Анализ дубликатов счетов-фактур</h2>
+    <Box
+      sx={{ flexGrow: 1, bgcolor: 'background.default', minHeight: '100vh' }}
+      ref={upPageRef}
+    >
+      <AppBar position="static" color="primary">
+        <Toolbar sx={{ justifyContent: 'center' }}>
+          <Typography variant="h6" component="div">
+            Анализ дубликатов счетов-фактур
+          </Typography>
+        </Toolbar>
+      </AppBar>
 
-      {data.length <= 0 && <Instruction />}
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        {data.length <= 0 && <Instruction />}
 
-      <div className="form-section">
-        <div className="file-input-container">
-          <label htmlFor="file-upload" className="file-upload-label">
-            Выбрать Excel файл
-          </label>
-          <input
-            id="file-upload"
-            ref={fileInputRef}
-            type="file"
-            accept=".xlsx,.xls"
-            onChange={handleFileChange}
-            className="file-input-hidden"
-          />
-        </div>
-        <div className="button-group">
-          <button
-            onClick={handleCheck}
-            disabled={data.length <= 0}
-            className="btn-primary"
+        <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 2,
+              alignItems: 'center',
+            }}
           >
-            Найти дубликаты
-          </button>
-          <button onClick={handleClear} className="btn-danger">
-            Очистить
-          </button>
-        </div>
-      </div>
+            <Typography variant="h6" sx={{ mb: 1 }}>
+              Загрузка данных:
+            </Typography>
 
-      {error && <div className="error-message">{error}</div>}
-
-      {/* Дубли по Сумма + Номер */}
-      {duplicatesBySumAndNumber.length > 0 && (
-        <div className="duplicates-section">
-          <h3 className="section-header">
-            Дубликаты по «Сумма + Номер» ({duplicatesBySumAndNumber.length})
-          </h3>
-          <table className="modern-table">
-            <thead>
-              <tr>
-                <th>Дата</th>
-                <th>Номер</th>
-                <th>Сумма</th>
-                <th>Контрагент</th>
-              </tr>
-            </thead>
-            <tbody>
-              {duplicatesBySumAndNumber.map((item, index) =>
-                renderRow(item, index, handleCellClick)
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* Дубли по Сумма + Контрагент — с фильтром */}
-      {duplicatesBySumCounterpartyDate.length > 0 && (
-        <div className="duplicates-section">
-          <div className="filter-container">
-            <h3 className="section-title">
-              Дубликаты по «Дата + Сумма + Контрагент» (
-              {duplicatesBySumCounterpartyDate.length})
-            </h3>
-            <select
-              value={selectedCounterpartyForSumCounterpartyDate}
-              onChange={(e) =>
-                setSelectedCounterpartyForSumCounterpartyDate(e.target.value)
-              }
-              className="filter-select"
+            <Button
+              variant="contained"
+              component="label"
+              startIcon={<UploadFileIcon />}
+              sx={{ minWidth: 200 }}
             >
-              <option value="">— Все контрагенты —</option>
-              {uniqueCounterpartiesSumCp.map((counterparty) => (
-                <option key={counterparty} value={counterparty}>
-                  {counterparty}
-                </option>
-              ))}
-            </select>
-          </div>
+              Выбрать Excel файл
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={handleFileChange}
+                hidden
+              />
+            </Button>
 
-          {filteredSumCounterparty.length > 0 ? (
-            <table className="modern-table">
-              <thead>
-                <tr>
-                  <th>Дата</th>
-                  <th>Номер</th>
-                  <th>Сумма</th>
-                  <th>Контрагент</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredSumCounterparty.map((item, index) =>
-                  renderRow(item, index, handleCellClick)
-                )}
-              </tbody>
-            </table>
-          ) : (
-            <p className="no-data-message">Нет записей для выбранного контрагента.</p>
-          )}
-        </div>
-      )}
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleCheck}
+                disabled={data.length <= 0}
+                startIcon={<SearchIcon />}
+              >
+                Найти дубликаты
+              </Button>
+              <Button
+                variant="outlined"
+                color="secondary"
+                onClick={handleClear}
+                startIcon={<ClearIcon />}
+              >
+                Очистить
+              </Button>
+            </Box>
+          </Box>
+        </Paper>
 
-      {/* Дубли только по Сумма — с фильтром */}
-      {duplicatesBySumOnly.length > 0 && (
-        <div className="duplicates-section">
-          <div className="filter-container">
-            <h3 className="section-title">
-              Дубликаты только по «Сумма» ({duplicatesBySumOnly.length})
-            </h3>
-            <select
-              value={selectedCounterpartyForSumOnly}
-              onChange={(e) => setSelectedCounterpartyForSumOnly(e.target.value)}
-              className="filter-select"
-            >
-              <option value="">— Все контрагенты —</option>
-              {uniqueCounterpartiesSumOnly.map((counterparty) => (
-                <option key={counterparty} value={counterparty}>
-                  {counterparty}
-                </option>
-              ))}
-            </select>
-          </div>
+        {error && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {error}
+          </Alert>
+        )}
 
-          {filteredSumOnly.length > 0 ? (
-            <table className="modern-table">
-              <thead>
-                <tr>
-                  <th>Дата</th>
-                  <th>Номер</th>
-                  <th>Сумма</th>
-                  <th>Контрагент</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredSumOnly.map((item, index) =>
-                  renderRow(item, index, handleCellClick)
-                )}
-              </tbody>
-            </table>
-          ) : (
-            <p className="no-data-message">Нет записей для выбранного контрагента.</p>
-          )}
-          <button onClick={scrollToTop} className="btn-sticky">
-            Наверх
-          </button>
-        </div>
-      )}
+        {/* Дубли по Сумма + Номер */}
+        {duplicatesBySumAndNumber.length > 0 && (
+          <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
+            <Typography variant="h5" gutterBottom>
+              Дубликаты по «Сумма + Номер» ({duplicatesBySumAndNumber.length})
+            </Typography>
+            <TableContainer component={Paper}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Дата</TableCell>
+                    <TableCell>Номер</TableCell>
+                    <TableCell>Сумма</TableCell>
+                    <TableCell>Контрагент</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {duplicatesBySumAndNumber.map((item, index) => (
+                    <TableRow key={index} hover>
+                      <TableCell onClick={handleCellClick} className="clickable-cell">
+                        {item['Дата']}
+                      </TableCell>
+                      <TableCell onClick={handleCellClick} className="clickable-cell">
+                        {item['Номер']}
+                      </TableCell>
+                      <TableCell onClick={handleCellClick} className="clickable-cell">
+                        {formatAmount(item['Сумма'])}
+                      </TableCell>
+                      <TableCell onClick={handleCellClick} className="clickable-cell">
+                        {item['Контрагент']}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Paper>
+        )}
 
-      {showCopiedPopup && <div className="copied-popup">Скопировано</div>}
-    </div>
+        {/* Дубли по Сумма + Контрагент — с фильтром */}
+        {duplicatesBySumCounterpartyDate.length > 0 && (
+          <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+              <Typography variant="h5" sx={{ flexGrow: 1 }}>
+                Дубликаты по «Дата + Сумма + Контрагент» (
+                {duplicatesBySumCounterpartyDate.length})
+              </Typography>
+              <FormControl sx={{ minWidth: 200 }}>
+                <InputLabel>Контрагент</InputLabel>
+                <Select
+                  value={selectedCounterpartyForSumCounterpartyDate}
+                  onChange={(e) =>
+                    setSelectedCounterpartyForSumCounterpartyDate(e.target.value)
+                  }
+                  label="Контрагент"
+                >
+                  <MenuItem value="">— Все контрагенты —</MenuItem>
+                  {uniqueCounterpartiesSumCp.map((counterparty) => (
+                    <MenuItem key={counterparty} value={counterparty}>
+                      {counterparty}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Box>
+
+            {filteredSumCounterparty.length > 0 ? (
+              <TableContainer component={Paper}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Дата</TableCell>
+                      <TableCell>Номер</TableCell>
+                      <TableCell>Сумма</TableCell>
+                      <TableCell>Контрагент</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {filteredSumCounterparty.map((item, index) => (
+                      <TableRow key={index} hover>
+                        <TableCell onClick={handleCellClick} className="clickable-cell">
+                          {item['Дата']}
+                        </TableCell>
+                        <TableCell onClick={handleCellClick} className="clickable-cell">
+                          {item['Номер']}
+                        </TableCell>
+                        <TableCell onClick={handleCellClick} className="clickable-cell">
+                          {formatAmount(item['Сумма'])}
+                        </TableCell>
+                        <TableCell onClick={handleCellClick} className="clickable-cell">
+                          {item['Контрагент']}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            ) : (
+              <Typography
+                variant="body1"
+                color="text.secondary"
+                sx={{ textAlign: 'center', py: 4 }}
+              >
+                Нет записей для выбранного контрагента.
+              </Typography>
+            )}
+          </Paper>
+        )}
+
+        {/* Дубли только по Сумма — с фильтром */}
+        {duplicatesBySumOnly.length > 0 && (
+          <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+              <Typography variant="h5" sx={{ flexGrow: 1 }}>
+                Дубликаты только по «Сумма» ({duplicatesBySumOnly.length})
+              </Typography>
+              <FormControl sx={{ minWidth: 200 }}>
+                <InputLabel>Контрагент</InputLabel>
+                <Select
+                  value={selectedCounterpartyForSumOnly}
+                  onChange={(e) => setSelectedCounterpartyForSumOnly(e.target.value)}
+                  label="Контрагент"
+                >
+                  <MenuItem value="">— Все контрагенты —</MenuItem>
+                  {uniqueCounterpartiesSumOnly.map((counterparty) => (
+                    <MenuItem key={counterparty} value={counterparty}>
+                      {counterparty}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Box>
+
+            {filteredSumOnly.length > 0 ? (
+              <TableContainer component={Paper}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Дата</TableCell>
+                      <TableCell>Номер</TableCell>
+                      <TableCell>Сумма</TableCell>
+                      <TableCell>Контрагент</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {filteredSumOnly.map((item, index) => (
+                      <TableRow key={index} hover>
+                        <TableCell onClick={handleCellClick} className="clickable-cell">
+                          {item['Дата']}
+                        </TableCell>
+                        <TableCell onClick={handleCellClick} className="clickable-cell">
+                          {item['Номер']}
+                        </TableCell>
+                        <TableCell onClick={handleCellClick} className="clickable-cell">
+                          {formatAmount(item['Сумма'])}
+                        </TableCell>
+                        <TableCell onClick={handleCellClick} className="clickable-cell">
+                          {item['Контрагент']}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            ) : (
+              <Typography
+                variant="body1"
+                color="text.secondary"
+                sx={{ textAlign: 'center', py: 4 }}
+              >
+                Нет записей для выбранного контрагента.
+              </Typography>
+            )}
+          </Paper>
+        )}
+      </Container>
+
+      {/* Snackbar для уведомления о копировании */}
+      <Snackbar
+        open={showCopiedPopup}
+        autoHideDuration={2000}
+        onClose={() => setShowCopiedPopup(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert severity="success" variant="filled">
+          Скопировано в буфер обмена
+        </Alert>
+      </Snackbar>
+
+      {/* FAB для прокрутки наверх */}
+      <Fab
+        color="primary"
+        sx={{ position: 'fixed', bottom: 16, right: 16 }}
+        onClick={scrollToTop}
+      >
+        <KeyboardArrowUpIcon />
+      </Fab>
+    </Box>
   );
 };
 
