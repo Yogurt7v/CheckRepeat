@@ -4,9 +4,11 @@ import './App.css';
 import { formatAmount } from './utils/formatAmount';
 import { renderRow } from './utils/renderRow';
 import Instruction from './Instruction';
+import NoDuplicatesFound from './NoDuplicatesFound';
 
 const App = () => {
   const [data, setData] = useState([]);
+  const [error, setError] = useState('');
   const [duplicatesBySumAndNumber, setDuplicatesBySumAndNumber] = useState([]);
   const [duplicatesBySumCounterpartyDate, setDuplicatesBySumCounterpartyDate] = useState(
     []
@@ -35,6 +37,26 @@ const App = () => {
       const worksheet = workbook.Sheets[sheetName];
       const jsonData = utils.sheet_to_json(worksheet);
 
+      // Проверка наличия необходимых столбцов
+      const requiredColumns = ['Дата', 'Номер', 'Сумма', 'Контрагент'];
+      const hasAllColumns =
+        jsonData.length > 0 &&
+        requiredColumns.every((col) => jsonData.some((row) => col in row));
+
+      if (!hasAllColumns) {
+        setError(
+          'Загруженный файл не содержит необходимых столбцов: Дата, Номер, Сумма, Контрагент.'
+        );
+        setData([]);
+        setDuplicatesBySumAndNumber([]);
+        setDuplicatesBySumCounterpartyDate([]);
+        setDuplicatesBySumOnly([]);
+        setSelectedCounterpartyForSumCounterpartyDate('');
+        setSelectedCounterpartyForSumOnly('');
+        return;
+      }
+
+      setError('');
       setData(jsonData);
       setDuplicatesBySumAndNumber([]);
       setDuplicatesBySumCounterpartyDate([]);
@@ -124,6 +146,7 @@ const App = () => {
   // === Очистка ===
   const handleClear = () => {
     setData([]);
+    setError('');
     setDuplicatesBySumAndNumber([]);
     setDuplicatesBySumCounterpartyDate([]);
     setDuplicatesBySumOnly([]);
@@ -221,6 +244,8 @@ const App = () => {
           </button>
         </div>
       </div>
+
+      {error && <div className="error-message">{error}</div>}
 
       {/* Дубли по Сумма + Номер */}
       {duplicatesBySumAndNumber.length > 0 && (
