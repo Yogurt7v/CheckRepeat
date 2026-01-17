@@ -84,6 +84,7 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           borderBottom: '1px solid #e8eaed',
+          textAlign: 'center',
         },
       },
     },
