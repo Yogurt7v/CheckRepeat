@@ -176,7 +176,7 @@ const App = () => {
       (item) => item['Контрагент'] === selectedCounterpartyForSumOnly
     );
 
-    // Группируем по сумме и фильтруем группы с минимум 3 повторениями
+    // Группируем по сумме и фильтруем группы с минимум 2 повторения
     const sumMap = new Map();
     for (const item of filteredByCounterparty) {
       const key = formatAmount(item['Сумма']);
