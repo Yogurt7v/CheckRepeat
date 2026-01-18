@@ -14,7 +14,7 @@ export default function Instruction() {
         <Typography variant="h6" sx={{ mb: 2 }}>
           Подготовка данных:
         </Typography>
-        <Typography variant="body1" align="center">
+        <Typography variant="body1" align="center" color="text.secondary">
           Выберите в 1с счета-фактуры полученные <strong>от всех контрагентов</strong> за
           необходимый период.
         </Typography>
